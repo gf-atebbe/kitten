@@ -14,6 +14,8 @@
  */
 package com.cloudera.kitten.appmaster.params.lua;
 
+import java.io.File;
+import java.io.IOException;
 import java.net.URI;
 import java.util.Iterator;
 import java.util.List;
@@ -58,7 +60,7 @@ public class LuaApplicationMasterParameters implements ApplicationMasterParamete
   
   public LuaApplicationMasterParameters(String script, String jobName,
       Configuration conf, Map<String, Object> extras) {
-    this(script, jobName, conf, extras, loadLocalToUris());
+    this(script, jobName, conf, extras, loadLocalToUris(conf));
   }
   
   public LuaApplicationMasterParameters(String script, String jobName,
@@ -71,10 +73,18 @@ public class LuaApplicationMasterParameters implements ApplicationMasterParamete
     this.hostname = NetUtils.getHostname();
   }
   
-  private static Map<String, URI> loadLocalToUris() {
+  private static Map<String, URI> loadLocalToUris(Configuration conf) {
     Map<String, String> e = System.getenv();
     if (e.containsKey(LuaFields.KITTEN_LOCAL_FILE_TO_URI)) {
-      return LocalDataHelper.deserialize(e.get(LuaFields.KITTEN_LOCAL_FILE_TO_URI));
+      LocalDataHelper lfh = new LocalDataHelper(null, conf);
+      String hdfsFilename = e.get(LuaFields.KITTEN_LOCAL_FILE_TO_URI);
+      
+      try {
+        File hdfsFile = lfh.copyFromHdfs(hdfsFilename);
+        return LocalDataHelper.deserialize(hdfsFile.getPath());
+      } catch (IOException exc) {
+        return null;
+      }
     }
     return ImmutableMap.of();
   }

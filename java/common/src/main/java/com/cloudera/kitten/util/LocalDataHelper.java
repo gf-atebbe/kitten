@@ -28,6 +28,7 @@ import java.io.OutputStream;
 import java.net.URI;
 import java.util.Map;
 import java.util.Set;
+import java.util.UUID;
 
 import org.apache.commons.codec.binary.Base64;
 import org.apache.commons.logging.Log;
@@ -115,6 +116,21 @@ public class LocalDataHelper {
     copyToHdfs(key, tmpFile.getAbsolutePath());
   }
   
+  public File copyFromHdfs(String hdfsFile) throws IOException {
+    FileSystem fs = FileSystem.get(conf);
+    File dstFileHandle = File.createTempFile(UUID.randomUUID().toString(), ".txt");
+    Path dst = new Path(dstFileHandle.getPath());
+
+    LOG.info("Fetching file from HDFS: " + hdfsFile);
+    LOG.info("Fetching file from HDFS and storing it at: " + dstFileHandle.getPath());    
+
+    InputStream data = getFileOrResource(hdfsFile);
+    FSDataOutputStream os = fs.create(dst, true);
+    ByteStreams.copy(data, os);
+    os.close();
+    return dstFileHandle;
+  }
+  
   public void copyToHdfs(String localDataName) throws IOException {
     copyToHdfs(localDataName, localDataName);
   }
@@ -122,6 +138,7 @@ public class LocalDataHelper {
   private void copyToHdfs(String key, String localDataName) throws IOException {
     if (!localToHdfs.containsKey(localDataName)) {
       FileSystem fs = FileSystem.get(conf);
+      LOG.info("Copying file to HDFS: " + localDataName + " to " + src.getName());
       Path src = new Path(localDataName);
       Path dst = getPath(fs, src.getName());
       InputStream data = getFileOrResource(localDataName);

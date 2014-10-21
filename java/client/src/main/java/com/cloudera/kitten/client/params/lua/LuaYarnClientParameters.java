@@ -14,6 +14,9 @@
  */
 package com.cloudera.kitten.client.params.lua;
 
+import java.io.BufferedWriter;
+import java.io.File;
+import java.io.FileWriter;
 import java.io.IOException;
 import java.net.URI;
 import java.util.Iterator;
@@ -106,7 +109,28 @@ public class LuaYarnClientParameters implements YarnClientParameters {
   @Override
   public ContainerLaunchParameters getApplicationMasterParameters(ApplicationId applicationId) {
     Map<String, URI> localToUris = mapLocalFiles(applicationId);
-    extras.putEnv(LuaFields.KITTEN_LOCAL_FILE_TO_URI, LocalDataHelper.serialize(localToUris));
+    String serialized = LocalDataHelper.serialize(localToUris);
+    
+    // Write serialized to a file and push to HDFS then add that filename to the env
+    // With a large number of containers this environment variable causes bash to choke on the argument length 
+    // if serialized is stored in the env
+    try {
+      File temp = File.createTempFile(Integer.toString(applicationId.getId()), ".txt"); 
+      BufferedWriter bw = new BufferedWriter(new FileWriter(temp));
+      bw.write(serialized);
+      bw.close();
+      
+      LOG.info("Created temporary file " + temp.getName());
+
+      LocalDataHelper lfh = new LocalDataHelper(applicationId, conf);
+      lfh.copyToHdfs(temp.getPath());
+  
+      extras.putEnv(LuaFields.KITTEN_LOCAL_FILE_TO_URI, temp.getName());
+    }
+    catch(IOException exc) {
+        LOG.error(exc);
+    }
+
     return new LuaContainerLaunchParameters(env.getTable(LuaFields.MASTER), conf, localToUris, extras);
   }
 
