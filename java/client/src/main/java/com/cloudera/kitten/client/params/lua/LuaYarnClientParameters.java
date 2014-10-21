@@ -115,7 +115,7 @@ public class LuaYarnClientParameters implements YarnClientParameters {
     // With a large number of containers this environment variable causes bash to choke on the argument length 
     // if serialized is stored in the env
     try {
-      File temp = File.createTempFile(Integer.toString(applicationId.getId()), ".txt"); 
+      File temp = File.createTempFile("ApplicationID" + Integer.toString(applicationId.getId()), ".txt"); 
       BufferedWriter bw = new BufferedWriter(new FileWriter(temp));
       bw.write(serialized);
       bw.close();
@@ -123,9 +123,9 @@ public class LuaYarnClientParameters implements YarnClientParameters {
       LOG.info("Created temporary file " + temp.getName());
 
       LocalDataHelper lfh = new LocalDataHelper(applicationId, conf);
-      lfh.copyToHdfs(temp.getPath());
+      String hdfsPath = lfh.copyToHdfs(temp.getPath());
   
-      extras.putEnv(LuaFields.KITTEN_LOCAL_FILE_TO_URI, temp.getName());
+      extras.putEnv(LuaFields.KITTEN_LOCAL_FILE_TO_URI, hdfsPath);
     }
     catch(IOException exc) {
         LOG.error(exc);

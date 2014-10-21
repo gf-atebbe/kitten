@@ -20,6 +20,7 @@ import java.net.URI;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
+import java.util.Scanner;
 
 import org.apache.hadoop.conf.Configuration;
 
@@ -80,15 +81,18 @@ public class LuaApplicationMasterParameters implements ApplicationMasterParamete
       String hdfsFilename = e.get(LuaFields.KITTEN_LOCAL_FILE_TO_URI);
       
       try {
-        File hdfsFile = lfh.copyFromHdfs(hdfsFilename);
-        return LocalDataHelper.deserialize(hdfsFile.getPath());
+        File hdfsFile = new File(lfh.copyFromHdfs(hdfsFilename));
+        String content = new Scanner(hdfsFile).useDelimiter("\\Z").next();
+        Map<String, URI> fileData = LocalDataHelper.deserialize(content);
+        hdfsFile.delete();
+        return fileData;
       } catch (IOException exc) {
         return null;
       }
     }
     return ImmutableMap.of();
   }
-  
+
   private static Map<String, Object> loadExtras(Map<String, Object> masterExtras) {
     Map<String, String> e = System.getenv();
     if (e.containsKey(LuaFields.KITTEN_EXTRA_LUA_VALUES)) {

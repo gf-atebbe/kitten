@@ -116,40 +116,35 @@ public class LocalDataHelper {
     copyToHdfs(key, tmpFile.getAbsolutePath());
   }
   
-  public File copyFromHdfs(String hdfsFile) throws IOException {
+  public String copyFromHdfs(String hdfsFile) throws IOException {
     FileSystem fs = FileSystem.get(conf);
-    File dstFileHandle = File.createTempFile(UUID.randomUUID().toString(), ".txt");
-    Path dst = new Path(dstFileHandle.getPath());
-
-    LOG.info("Fetching file from HDFS: " + hdfsFile);
-    LOG.info("Fetching file from HDFS and storing it at: " + dstFileHandle.getPath());    
-
-    InputStream data = getFileOrResource(hdfsFile);
-    FSDataOutputStream os = fs.create(dst, true);
-    ByteStreams.copy(data, os);
-    os.close();
-    return dstFileHandle;
+    Path src = new Path(hdfsFile);
+    Path dst = new Path(fs.getLocal(conf).getWorkingDirectory().toString().replace("file:", "") + "/" + UUID.randomUUID().toString() + ".txt");
+    fs.copyToLocalFile(true, src, dst);
+    return dst.toString();
   }
   
-  public void copyToHdfs(String localDataName) throws IOException {
-    copyToHdfs(localDataName, localDataName);
+  public String copyToHdfs(String localDataName) throws IOException {
+    return copyToHdfs(localDataName, localDataName);
   }
   
-  private void copyToHdfs(String key, String localDataName) throws IOException {
+  private String copyToHdfs(String key, String localDataName) throws IOException {
     if (!localToHdfs.containsKey(localDataName)) {
       FileSystem fs = FileSystem.get(conf);
       Path src = new Path(localDataName);
       Path dst = getPath(fs, src.getName());
-      LOG.info("Copying file to HDFS: " + localDataName + " to " + dst.toString());
       InputStream data = getFileOrResource(localDataName);
       FSDataOutputStream os = fs.create(dst, true);
       ByteStreams.copy(data, os);
       os.close();
       URI uri = dst.toUri();
       localToHdfs.put(key, uri);
+      return dst.toString();
     }
+    
+    return "";
   }
-  
+
   private Path getPath(FileSystem fs, String name) {
     int cp = 0;
     while (names.contains(name)) {
