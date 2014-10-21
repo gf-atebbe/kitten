@@ -138,9 +138,9 @@ public class LocalDataHelper {
   private void copyToHdfs(String key, String localDataName) throws IOException {
     if (!localToHdfs.containsKey(localDataName)) {
       FileSystem fs = FileSystem.get(conf);
-      LOG.info("Copying file to HDFS: " + localDataName + " to " + src.getName());
       Path src = new Path(localDataName);
       Path dst = getPath(fs, src.getName());
+      LOG.info("Copying file to HDFS: " + localDataName + " to " + dst.toString());
       InputStream data = getFileOrResource(localDataName);
       FSDataOutputStream os = fs.create(dst, true);
       ByteStreams.copy(data, os);
